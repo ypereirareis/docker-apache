@@ -40,7 +40,9 @@ RUN apt-get update -qq && apt-get install -qqy --force-yes \
     apache2 \
     apache2-mpm-worker \
     apache2-utils \
-    libapache2-mod-php5
+    libapache2-mod-php5 \
+    libapache2-modsecurity \
+    libapache2-mod-evasive
 
 # Config Apache
 ADD conf/apache/vhost.conf /etc/apache2/sites-available/web.conf
@@ -50,12 +52,24 @@ RUN a2enmod rewrite \
     && rm -rf /var/www/html \
     && a2ensite web
 
+RUN a2enmod security2
+RUN a2enmod evasive
+
 # Config PHP
 ADD conf/php5/apc.ini /etc/php5/mods-available/apc.ini
 ADD conf/php5/php.ini /tmp/php.ini
 RUN cat /tmp/php.ini >> /etc/php5/apache2/php.ini \
     && cat /tmp/php.ini >> /etc/php5/cli/php.ini \
     && rm /tmp/php.ini
+
+
+RUN sed -i \
+    -e 's~^ServerSignature On$~ServerSignature Off~g' \
+    -e 's~^ServerTokens OS$~ServerTokens Prod~g' \
+    /etc/apache2/apache2.conf
+
+RUN echo "ServerSignature Off" >> /etc/apache2/apache2.conf
+RUN echo "ServerTokens Prod" >> /etc/apache2/apache2.conf
 
 # Logs
 RUN mkdir -p /var/log/apache2 \
